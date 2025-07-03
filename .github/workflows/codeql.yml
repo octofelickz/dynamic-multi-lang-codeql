@@ -13,17 +13,14 @@ jobs:
   create-matrix:
     runs-on: ubuntu-latest
     outputs:
-      matrix: ${{ steps.set-matrix.outputs.languages }}
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
       - name: Get languages from repo
         id: set-matrix
-        uses: advanced-security/set-codeql-language-matrix@v1.3.0
+        uses: advanced-security/set-codeql-language-matrix@copilot/fix-18
         with:
           access-token: ${{ secrets.GITHUB_TOKEN }}
           endpoint: ${{ github.event.repository.languages_url }}
-      - name: Print JSON
-        run: echo '${{ steps.set-matrix.outputs.languages }}'
-          
           
   analyze:
     needs: create-matrix
@@ -37,23 +34,27 @@ jobs:
 
     strategy:
       fail-fast: false
-      matrix: 
-        language: ${{ fromJSON(needs.create-matrix.outputs.matrix) }}
+      matrix: ${{ fromJSON(needs.create-matrix.outputs.matrix) }}
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v4
-
+      uses: actions/checkout@v3
     # Initializes the CodeQL tools for scanning.
     - name: Initialize CodeQL
       uses: github/codeql-action/init@v3
       with:
         languages: ${{ matrix.language }}
- 
-    # Autobuild attempts to build any compiled languages  (C/C++, C#, or Java).
-    - name: Autobuild
-      uses: github/codeql-action/autobuild@v3
+        build-mode: ${{ matrix.build-mode }}
 
+    - if: matrix.build-mode == 'manual'
+      shell: bash
+      run: |
+        echo 'If you are using a "manual" build mode for one or more of the' \
+          'languages you are analyzing, replace this with the commands to build' \
+          'your code, for example:'
+        echo '  make bootstrap'
+        echo '  make release'
+        exit 1
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v3
       with:
